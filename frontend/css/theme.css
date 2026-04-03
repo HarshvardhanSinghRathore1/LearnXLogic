@@ -1,0 +1,48 @@
+:root {
+  /* Light Theme Colors (White/Blue mix) */
+  --bg-color: #f8fafc;
+  --surf-color: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --primary-color: #2563eb;
+  --primary-hover: #1e40af;
+  --border-color: #e2e8f0;
+  
+  /* Glassmorphism System */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: var(--border-color);
+  --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+
+  /* Shared values */
+  --font-family: 'Inter', sans-serif;
+  --border-radius: 12px;
+  --transition: all 0.3s ease;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='dark'] {
+  /* Dark Theme Colors (Black/Red mix) */
+  --bg-color: #000000;
+  --surf-color: #1a1d24;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --primary-color: #e11d48;
+  --primary-hover: #be123c;
+  --border-color: #334155;
+  
+  /* Glassmorphism System */
+  --glass-bg: rgba(26, 29, 36, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3);
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  transition: background-color var(--transition), color var(--transition);
+}

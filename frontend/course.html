@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Session - LearnXLogic</title>
+    <meta name="description" content="Watch videos, generate AI notes and practice tasks.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/api.js" defer></script>
+    <script src="js/app.js" defer></script>
+    <style>
+        /* ── Page Layout ── */
+        .course-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 1.5rem;
+            padding-top: 1.5rem;
+            align-items: start;
+        }
+        @media (max-width: 900px) { .course-layout { grid-template-columns: 1fr; } }
+
+        /* ── Video Player ── */
+        .video-player {
+            position: relative;
+            background: #000;
+            border-radius: 14px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .video-player iframe { width: 100%; height: 100%; border: none; }
+
+        /* ── Tab System ── */
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 1.25rem;
+        }
+        .tab-btn {
+            padding: 0.65rem 1.25rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .tab-btn:hover:not(.active) { color: var(--text-primary); }
+
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* ── Video List ── */
+        .video-list { max-height: 420px; overflow-y: auto; padding-right: 4px; }
+        .video-item {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s;
+            align-items: flex-start;
+        }
+        .video-item:hover { background: var(--glass-bg); }
+        .video-item.active { background: rgba(99,102,241,0.12); }
+        .video-num {
+            min-width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .video-item.active .video-num { background: var(--primary-color); color: white; }
+        .video-item.done .video-num { background: #10b981; color: white; }
+        .video-title-text { font-size: 0.85rem; line-height: 1.4; color: var(--text-primary); }
+
+        /* ── AI Notes ── */
+        .notes-box {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            min-height: 200px;
+            line-height: 1.7;
+            font-size: 0.9rem;
+        }
+        .notes-box h1, .notes-box h2 { color: var(--primary-color); margin-top: 1.2rem; margin-bottom: 0.5rem; font-size: 1.1rem; }
+        .notes-box h3 { color: var(--text-primary); margin-top: 1rem; margin-bottom: 0.4rem; font-size: 1rem; }
+        .notes-box ul, .notes-box ol { padding-left: 1.4rem; margin-bottom: 0.75rem; }
+        .notes-box li { margin-bottom: 0.3rem; }
+        .notes-box code { background: rgba(99,102,241,0.15); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: monospace; font-size: 0.85em; }
+        .notes-box pre { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; overflow-x: auto; margin: 0.75rem 0; }
+        .notes-box pre code { background: none; padding: 0; }
+        .notes-box strong { color: var(--text-primary); }
+
+        /* ── Task Cards ── */
+        .task-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .task-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+        .task-card h4 { font-size: 0.95rem; margin: 0 0 0.2rem 0; }
+        .task-card p { font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 0.75rem 0; line-height: 1.5; }
+        .task-card-footer { display: flex; justify-content: space-between; align-items: center; }
+
+        /* ── Sidebar Header ── */
+        .sidebar-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 1.25rem; margin-bottom: 1rem; }
+
+        /* ── Progress ── */
+        .course-progress-wrap { margin: 0.75rem 0; }
+        .progress-track { background: var(--glass-border); border-radius: 99px; height: 6px; }
+        .progress-fill { background: linear-gradient(90deg, var(--primary-color), #a855f7); border-radius: 99px; height: 6px; transition: width 0.4s ease; }
+
+        /* ── Generate btn ── */
+        .btn-ai {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.55rem 1.1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .btn-ai:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-ai:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* ── Checklist ── */
+        .check-item { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem; border-radius: 8px; border-bottom: 1px solid var(--glass-border); }
+        .check-item:last-child { border-bottom: none; }
+        .check-item input[type=checkbox] { margin-top: 3px; width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary-color); }
+        .check-content h4 { font-size: 0.9rem; margin: 0 0 0.2rem 0; }
+        .check-content p { font-size: 0.82rem; color: var(--text-secondary); margin: 0; }
+
+        /* ── Scrollbar ── */
+        .video-list::-webkit-scrollbar { width: 4px; }
+        .video-list::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="ambient-blob blob-1"></div>
+    <div class="ambient-blob blob-2"></div>
+
+    <header style="background: var(--glass-bg); backdrop-filter: blur(16px); border-bottom: 1px solid var(--glass-border); padding: 0.85rem 0; position: sticky; top: 0; z-index: 100;">
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <a href="dashboard.html" style="color: var(--text-secondary); font-size: 1.2rem; text-decoration: none;">←</a>
+                <span style="font-weight: 700; font-size: 1.1rem; color: var(--text-primary);">📚 LearnXLogic</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span id="courseProgressBadge" class="pill pill-blue" style="font-size: 0.8rem;">Loading...</span>
+                <button id="themeToggle" class="btn" style="background: none; border: none; font-size: 1.2rem; cursor: pointer;">🌙</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div id="loadingState" style="padding: 5rem; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 1rem; animation: pulse 1.5s infinite;">⚡</div>
+            <h2 style="margin-bottom: 0.5rem;">Loading AI Study Session...</h2>
+            <p style="color: var(--text-secondary);">Fetching your course and study plan</p>
+        </div>
+
+        <div id="mainView" style="display: none;">
+            <!-- Course Header -->
+            <div style="padding: 1.5rem 0 0.5rem 0;">
+                <h1 id="courseTitle" style="font-size: 1.6rem; margin-bottom: 0.3rem;"></h1>
+                <p id="courseSubtitle" style="color: var(--text-secondary); font-size: 0.95rem;"></p>
+                <div class="course-progress-wrap">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.4rem;">
+                        <span>Overall Progress</span>
+                        <span id="progressLabel">0%</span>
+                    </div>
+                    <div class="progress-track"><div class="progress-fill" id="progressBar" style="width: 0%;"></div></div>
+                </div>
+            </div>
+
+            <div class="course-layout">
+                <!-- LEFT: Video + Tabs -->
+                <div>
+                    <div class="video-player" id="videoPlayer">
+                        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;">Select a video to begin</div>
+                    </div>
+
+                    <div style="margin-top: 1.25rem;">
+                        <div class="tab-bar">
+                            <button class="tab-btn active" data-tab="videos">📹 Videos</button>
+                            <button class="tab-btn" data-tab="notes">🤖 AI Notes</button>
+                            <button class="tab-btn" data-tab="tasks">✅ Tasks</button>
+                        </div>
+
+                        <!-- Videos Tab -->
+                        <div id="tab-videos" class="tab-pane active">
+                            <div class="video-list" id="videoList"></div>
+                        </div>
+
+                        <!-- AI Notes Tab -->
+                        <div id="tab-notes" class="tab-pane">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1rem;" id="notesVideoTitle">Select a video first</h3>
+                                    <p style="color: var(--text-secondary); font-size: 0.82rem; margin: 0.2rem 0 0 0;">AI-generated study notes</p>
+                                </div>
+                                <button class="btn-ai" id="generateNotesBtn">✨ Generate Notes</button>
+                            </div>
+                            <div class="notes-box" id="notesContent">
+                                <p style="color: var(--text-secondary); text-align: center; padding: 2rem 0;">
+                                    Select a video from the Videos tab, then click "Generate Notes" to create AI-powered study notes.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Tasks Tab -->
+                        <div id="tab-tasks" class="tab-pane">
+                            <!-- Generate Task button row -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1rem;" id="taskVideoTitle">Select a video first</h3>
+                                    <p style="color: var(--text-secondary); font-size: 0.82rem; margin: 0.2rem 0 0 0;">AI-generated practice tasks for this video</p>
+                                </div>
+                                <button class="btn-ai" id="generateTaskBtn">⚡ Generate Task</button>
+                            </div>
+                            <!-- Weekly study plan tasks (existing) -->
+                            <div id="tasksContainer"></div>
+                            <!-- Video-specific AI tasks (new) -->
+                            <div id="videoTasksResult" style="display:none; margin-top: 1.5rem;">
+                                <h4 style="font-size:0.9rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">⚡ Video Practice Tasks</h4>
+                                <div id="videoTasksList"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Sidebar -->
+                <aside>
+                    <!-- Now Playing -->
+                    <div class="sidebar-card">
+                        <h3 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8rem;">Now Playing</h3>
+                        <p id="nowPlayingTitle" style="font-size: 0.9rem; font-weight: 600; line-height: 1.4; margin: 0;">—</p>
+                        <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+                            <button class="btn" id="markDoneBtn" style="flex: 1; background: #10b981; color: white; font-size: 0.85rem; padding: 0.5rem;">✓ Mark Done</button>
+                            <button class="btn" id="prevVideoBtn" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-color);">‹</button>
+                            <button class="btn" id="nextVideoBtn" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-color);">›</button>
+                        </div>
+                    </div>
+
+                    <!-- Week Plan -->
+                    <div class="sidebar-card">
+                        <h3 style="margin: 0 0 0.75rem 0; font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">📅 This Week's Plan</h3>
+                        <div id="weekPlanList"></div>
+                    </div>
+
+                    <!-- Complete Session -->
+                    <div class="sidebar-card" style="text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏆</div>
+                        <h3 style="margin-bottom: 0.3rem;">Finish Session</h3>
+                        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">Complete all tasks to unlock the next week</p>
+                        <a href="dashboard.html" class="btn btn-primary" style="display: block; width: 100%; box-sizing: border-box; text-align: center; text-decoration: none;">← Back to Dashboard</a>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Markdown → HTML (minimal renderer)
+        function mdToHtml(md) {
+            if (!md) return '';
+            return md
+                .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/^#{3} (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^#{2} (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^#{1} (.+)$/gm, '<h1>$1</h1>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>[\s\S]+?<\/li>)/g, '<ul>$1</ul>')
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/<\/ul><br><br><ul>/g, '');
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = 'login.html'; return; }
+
+            const params = new URLSearchParams(window.location.search);
+            const courseId = params.get('id');
+            if (!courseId) { window.location.href = 'dashboard.html'; return; }
+
+            // Expose for chatbot widget
+            window._chatCourseId = courseId;
+            window._chatVideoTitle = 'this video';
+
+            let course = null;
+            let currentVideoIndex = 0;
+
+            // ── Load Course ──
+            try {
+                const res = await getCourseById(courseId);
+                if (res.success && res.data) {
+                    course = res.data;
+                    renderAll(course);
+                } else {
+                    document.getElementById('loadingState').innerHTML = '<p style="color:var(--text-secondary);padding:3rem;text-align:center;">Course not found.</p>';
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loadingState').innerHTML = '<p style="color:red;padding:3rem;text-align:center;">Failed to load course.</p>';
+            }
+
+            function renderAll(c) {
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('mainView').style.display = 'block';
+                document.getElementById('courseTitle').innerText = c.title;
+                document.getElementById('courseSubtitle').innerText = c.videos.length + ' videos · ' + (c.studyPlan ? c.studyPlan.length : 0) + ' week(s) plan';
+                document.getElementById('courseProgressBadge').innerText = 'Progress: ' + (c.progress || 0) + '%';
+                document.getElementById('progressLabel').innerText = (c.progress || 0) + '%';
+                document.getElementById('progressBar').style.width = (c.progress || 0) + '%';
+
+                renderVideoList(c);
+                renderTasks(c);
+                renderWeekPlan(c);
+
+                if (c.videos && c.videos.length > 0) {
+                    selectVideo(0);
+                }
+            }
+
+            function renderVideoList(c) {
+                var list = document.getElementById('videoList');
+                list.innerHTML = '';
+                if (!c.videos || c.videos.length === 0) {
+                    list.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:1rem;">No videos found.</p>';
+                    return;
+                }
+                c.videos.forEach(function(v, i) {
+                    var div = document.createElement('div');
+                    div.className = 'video-item' + (v.completed ? ' done' : '');
+                    div.id = 'vi-' + i;
+                    div.innerHTML =
+                        '<div class="video-num">' + (v.completed ? '✓' : (i + 1)) + '</div>' +
+                        '<div class="video-title-text">' + v.title + '</div>';
+                    div.addEventListener('click', function() { selectVideo(i); });
+                    list.appendChild(div);
+                });
+            }
+
+            function selectVideo(idx) {
+                currentVideoIndex = idx;
+                var v = course.videos[idx];
+                if (!v) return;
+
+                // Highlight active
+                document.querySelectorAll('.video-item').forEach(function(el) { el.classList.remove('active'); });
+                var activeItem = document.getElementById('vi-' + idx);
+                if (activeItem) {
+                    activeItem.classList.add('active');
+                    activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+
+                // Embed video
+                document.getElementById('videoPlayer').innerHTML =
+                    '<iframe src="https://www.youtube.com/embed/' + v.videoId + '?rel=0&autoplay=1" allowfullscreen allow="autoplay; encrypted-media"></iframe>';
+
+                document.getElementById('nowPlayingTitle').innerText = v.title;
+                document.getElementById('notesVideoTitle').innerText = v.title;
+                document.getElementById('taskVideoTitle').innerText = v.title;
+
+                // Reset video task results when switching videos
+                document.getElementById('videoTasksResult').style.display = 'none';
+                document.getElementById('videoTasksList').innerHTML = '';
+
+                // Update chatbot context
+                window._chatVideoTitle = v.title;
+                var chatCtx = document.getElementById('chatContextLabel');
+                if (chatCtx) chatCtx.textContent = v.title.length > 35 ? v.title.slice(0, 35) + '…' : v.title;
+
+                // Check for existing cached notes
+                if (course.notes) {
+                    var cached = course.notes.find(function(n) { return n.videoIndex === idx; });
+                    if (cached) {
+                        document.getElementById('notesContent').innerHTML = mdToHtml(cached.content);
+                    } else {
+                        document.getElementById('notesContent').innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:2rem 0;">Click "Generate Notes" to create AI-powered notes for this video.</p>';
+                    }
+                }
+            }
+
+            // Navigation Buttons
+            document.getElementById('prevVideoBtn').addEventListener('click', function() {
+                if (currentVideoIndex > 0) selectVideo(currentVideoIndex - 1);
+            });
+            document.getElementById('nextVideoBtn').addEventListener('click', function() {
+                if (course && currentVideoIndex < course.videos.length - 1) selectVideo(currentVideoIndex + 1);
+            });
+
+            // Mark Done
+            document.getElementById('markDoneBtn').addEventListener('click', async function() {
+                if (!course) return;
+                var v = course.videos[currentVideoIndex];
+                if (!v) return;
+                
+                const originalStatus = v.completed;
+                v.completed = !v.completed;
+
+                // 1. Persist to Backend
+                try {
+                    await updateCourseProgressApi(courseId, currentVideoIndex, v.completed);
+                    
+                    // 2. Log activity if marking as done
+                    if (v.completed) {
+                        const now = new Date();
+                        const offset = now.getTimezoneOffset();
+                        const local = new Date(now.getTime() - (offset * 60 * 1000));
+                        const localDate = local.toISOString().split('T')[0];
+                        await logActivityApi(20, true, localDate); // Assume 20 mins per video
+                    }
+                } catch (e) {
+                    console.error('Failed to save progress:', e);
+                    v.completed = originalStatus; // Revert on failure
+                    alert('Failed to save progress. Checking connection...');
+                    return;
+                }
+
+                // Update progress UI
+                var done = course.videos.filter(function(v) { return v.completed; }).length;
+                var pct = Math.round((done / course.videos.length) * 100);
+                course.progress = pct;
+                document.getElementById('progressLabel').innerText = pct + '%';
+                document.getElementById('progressBar').style.width = pct + '%';
+                document.getElementById('courseProgressBadge').innerText = 'Progress: ' + pct + '%';
+
+                // Re-render list
+                renderVideoList(course);
+                const activeItem = document.getElementById('vi-' + currentVideoIndex);
+                if (activeItem) activeItem.classList.add('active');
+
+                // Advance to next video
+                if (v.completed && currentVideoIndex < course.videos.length - 1) {
+                    setTimeout(function() { selectVideo(currentVideoIndex + 1); }, 400);
+                }
+            });
+
+            // ── Generate Notes ──
+            document.getElementById('generateNotesBtn').addEventListener('click', async function() {
+                var btn = this;
+                btn.disabled = true;
+                btn.innerText = '⏳ Generating...';
+                document.getElementById('notesContent').innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:2rem 0;">🤖 AI is crafting your study notes... This may take 10-20 seconds.</p>';
+
+                try {
+                    var res = await generateNotesApi(courseId, currentVideoIndex);
+                    if (res.success) {
+                        document.getElementById('notesContent').innerHTML = mdToHtml(res.data);
+                        // Update local cache for the course
+                        if (!course.notes) course.notes = [];
+                        var existing = course.notes.findIndex(function(n) { return n.videoIndex === currentVideoIndex; });
+                        if (existing >= 0) { course.notes[existing].content = res.data; }
+                        else { course.notes.push({ videoIndex: currentVideoIndex, content: res.data }); }
+
+                        // --- PERSISTENT NOTES SAVE (localStorage) ---
+                        // Save generated notes so they appear in Dashboard + Profile
+                        const globalNotes = JSON.parse(localStorage.getItem('globalStudyNotes') || '{"notes":[]}');
+                        if (!Array.isArray(globalNotes.notes)) globalNotes.notes = [];
+                        const v = course.videos[currentVideoIndex];
+                        const noteTitle = course.title + " - " + (v ? v.title : "Video " + (currentVideoIndex + 1));
+                        
+                        // Find existing note by title to update rather than duplicate
+                        const existingGlobalIdx = globalNotes.notes.findIndex(n => n.title === noteTitle);
+                        
+                        if (existingGlobalIdx >= 0) {
+                            // Update existing note, preserve its original id
+                            globalNotes.notes[existingGlobalIdx] = {
+                                id: globalNotes.notes[existingGlobalIdx].id || ("note_" + Date.now()),
+                                title: noteTitle,
+                                content: res.data,
+                                date: new Date().toLocaleDateString(),
+                                source: "AI Generated"
+                            };
+                        } else {
+                            // Append new note
+                            globalNotes.notes.push({
+                                id: "note_" + Date.now(),
+                                title: noteTitle,
+                                content: res.data,
+                                date: new Date().toLocaleDateString(),
+                                source: "AI Generated"
+                            });
+                        }
+                        localStorage.setItem('globalStudyNotes', JSON.stringify(globalNotes));
+                        // --- END PERSISTENT NOTES SAVE ---
+                        
+                    } else {
+                        document.getElementById('notesContent').innerHTML = '<p style="color:red;padding:1rem;">Failed to generate notes. Try again.</p>';
+                    }
+                } catch (e) {
+                    document.getElementById('notesContent').innerHTML = '<p style="color:red;padding:1rem;">Error: ' + e.message + '</p>';
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = '✨ Generate Notes';
+                }
+            });
+
+            // ── Generate Task Button ──
+            document.getElementById('generateTaskBtn').addEventListener('click', async function() {
+                var btn = this;
+                btn.disabled = true;
+                btn.innerText = '⏳ Generating...';
+
+                var resultSection = document.getElementById('videoTasksResult');
+                var tasksList = document.getElementById('videoTasksList');
+                resultSection.style.display = 'block';
+                tasksList.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:2rem 0;">🤖 AI is generating practice tasks for this video... This may take 10-20 seconds.</p>';
+
+                try {
+                    var res = await generateVideoTasksApi(courseId, currentVideoIndex);
+                    if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+                        tasksList.innerHTML = '';
+                        res.data.forEach(function(task, i) {
+                            var diffCls = task.difficulty === 'Easy' ? 'pill-green' : (task.difficulty === 'Hard' ? 'pill-purple' : 'pill-orange');
+                            var typeBadge = task.type === 'dsa' ? '<span class="pill pill-blue" style="font-size:0.75rem;">DSA</span>'
+                                          : task.type === 'webdev' ? '<span class="pill pill-green" style="font-size:0.75rem;">Web Dev</span>'
+                                          : '<span class="pill" style="font-size:0.75rem;">General</span>';
+                            var lcBtn = (task.leetcode_link && task.leetcode_link.startsWith('http'))
+                                ? '<button onclick="window.open(\'' + task.leetcode_link + '\',\'_blank\')" class="btn btn-primary" style="padding:0.4rem 1rem;font-size:0.82rem;">Solve on LeetCode →</button>'
+                                : '';
+                            tasksList.innerHTML +=
+                                '<div class="task-card">' +
+                                    '<div class="task-card-header">' +
+                                        '<div>' +
+                                            '<h4>' + (task.title || 'Task ' + (i + 1)) + '</h4>' +
+                                            '<p>' + (task.description || '') + '</p>' +
+                                        '</div>' +
+                                        '<span class="pill ' + diffCls + '">' + (task.difficulty || 'N/A') + '</span>' +
+                                    '</div>' +
+                                    '<div class="task-card-footer">' +
+                                        typeBadge +
+                                        lcBtn +
+                                    '</div>' +
+                                '</div>';
+                        });
+                    } else {
+                        var msg = (res && res.message) ? res.message : 'No tasks could be generated. Please try again.';
+                        tasksList.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:1rem;">' + msg + '</p>';
+                    }
+                } catch (e) {
+                    tasksList.innerHTML = '<p style="color:red;padding:1rem;">Error: ' + e.message + '</p>';
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = '⚡ Generate Task';
+                }
+            });
+
+            // ── Render Tasks ──
+            function renderTasks(c) {
+                var container = document.getElementById('tasksContainer');
+                container.innerHTML = '';
+                var week1 = c.studyPlan && c.studyPlan[0];
+                if (!week1 || !week1.tasks || week1.tasks.length === 0) {
+                    container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:2rem;">No tasks generated yet.</p>';
+                    return;
+                }
+                week1.tasks.forEach(function(task, i) {
+                    var diffCls = task.difficulty === 'Easy' ? 'pill-green' : (task.difficulty === 'Hard' ? 'pill-purple' : 'pill-orange');
+                    var typeCls = task.type === 'dsa' ? 'pill-blue' : 'pill-green';
+                    var typeLabel = task.type === 'dsa' ? 'DSA' : (task.type === 'webdev' ? 'Web Dev' : 'General');
+                    container.innerHTML +=
+                        '<div class="task-card">' +
+                            '<div class="task-card-header">' +
+                                '<div>' +
+                                    '<h4>' + (task.title || 'Task ' + (i+1)) + '</h4>' +
+                                    '<p>' + (task.description || '') + '</p>' +
+                                '</div>' +
+                                '<span class="pill ' + diffCls + '">' + (task.difficulty || 'N/A') + '</span>' +
+                            '</div>' +
+                            '<div class="task-card-footer">' +
+                                '<span class="pill ' + typeCls + '" style="font-size:0.75rem;">' + typeLabel + '</span>' +
+                                (task.link && task.link !== '#'
+                                    ? '<button onclick="window.open(\'' + task.link + '\',\'_blank\')" class="btn btn-primary" style="padding:0.4rem 1rem;font-size:0.82rem;">Solve →</button>'
+                                    : '<span style="font-size:0.8rem;color:var(--text-secondary);">' + (task.stats || '') + '</span>') +
+                            '</div>' +
+                        '</div>';
+                });
+            }
+
+            // ── Render Week Plan ──
+            function renderWeekPlan(c) {
+                var container = document.getElementById('weekPlanList');
+                container.innerHTML = '';
+                var plan = c.studyPlan || [];
+                if (plan.length === 0) {
+                    container.innerHTML = '<p style="font-size:0.82rem;color:var(--text-secondary);">No study plan.</p>';
+                    return;
+                }
+                plan.slice(0, 4).forEach(function(week) {
+                    container.innerHTML +=
+                        '<div style="display:flex;gap:0.6rem;align-items:flex-start;margin-bottom:0.6rem;">' +
+                            '<div style="min-width:28px;height:28px;border-radius:50%;background:var(--primary-color);color:white;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;">W' + week.week + '</div>' +
+                            '<div>' +
+                                '<p style="font-size:0.85rem;font-weight:600;margin:0;">' + week.topic + '</p>' +
+                                '<p style="font-size:0.78rem;color:var(--text-secondary);margin:0;">' + (week.tasks ? week.tasks.length : 0) + ' tasks</p>' +
+                            '</div>' +
+                        '</div>';
+                });
+                if (plan.length > 4) {
+                    container.innerHTML += '<p style="font-size:0.78rem;color:var(--text-secondary);text-align:center;">+' + (plan.length - 4) + ' more weeks</p>';
+                }
+            }
+
+            // ── Tab Switching ──
+            document.querySelectorAll('.tab-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+                    document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
+                    btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+                });
+            });
+        });
+    </script>
+    <!-- ── Chatbot Widget ── -->
+    <style>
+        .chat-fab {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.45);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.25s, box-shadow 0.25s;
+        }
+        .chat-fab:hover { transform: scale(1.1); box-shadow: 0 10px 35px rgba(99, 102, 241, 0.55); }
+
+        .chat-panel {
+            position: fixed;
+            bottom: 5.5rem;
+            right: 2rem;
+            width: 340px;
+            max-height: 480px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            z-index: 199;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: scale(0.85) translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.25s cubic-bezier(.22,1,.36,1), opacity 0.25s;
+        }
+        .chat-panel.open {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+            pointer-events: all;
+        }
+        .chat-header {
+            padding: 0.9rem 1.1rem;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex-shrink: 0;
+        }
+        .chat-header h4 { margin: 0; font-size: 0.9rem; font-weight: 700; }
+        .chat-header p { margin: 0; font-size: 0.72rem; opacity: 0.85; }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .chat-messages::-webkit-scrollbar { width: 4px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+        .chat-bubble {
+            max-width: 85%;
+            padding: 0.6rem 0.9rem;
+            border-radius: 14px;
+            font-size: 0.84rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .chat-bubble.user {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-bubble.bot {
+            background: var(--bg-color);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .chat-bubble.typing {
+            background: var(--bg-color);
+            border: 1px solid var(--glass-border);
+            align-self: flex-start;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        .chat-input-row {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            border-top: 1px solid var(--glass-border);
+            flex-shrink: 0;
+        }
+        .chat-input {
+            flex: 1;
+            background: var(--bg-color);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 0.55rem 0.9rem;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.2s;
+            resize: none;
+            font-family: inherit;
+            max-height: 80px;
+        }
+        .chat-input:focus { border-color: #6366f1; }
+        .chat-send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border: none;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            align-self: flex-end;
+            transition: opacity 0.2s;
+        }
+        .chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        @media (max-width: 480px) {
+            .chat-panel { width: calc(100vw - 2rem); right: 1rem; }
+            .chat-fab { right: 1rem; bottom: 1.5rem; }
+        }
+    </style>
+
+    <!-- FAB Button -->
+    <button class="chat-fab" id="chatFab" title="Ask AI Tutor">🤖</button>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel" id="chatPanel">
+        <div class="chat-header">
+            <div style="font-size: 1.4rem; flex-shrink: 0;">🤖</div>
+            <div>
+                <h4>AI Tutor</h4>
+                <p id="chatContextLabel">Ask anything about this video</p>
+            </div>
+            <div style="margin-left: auto; display: flex; background: rgba(255,255,255,0.15); padding: 2px; border-radius: 20px; font-size: 0.65rem; font-weight: 700;">
+                <button id="providerGemini" class="provider-btn active" style="border:none; background:white; color:#6366f1; padding: 3px 8px; border-radius: 15px; cursor:pointer;">GEMINI</button>
+                <button id="providerGPT" class="provider-btn" style="border:none; background:transparent; color:white; padding: 3px 8px; border-radius: 15px; cursor:pointer;">GPT</button>
+            </div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-bubble bot">Hi! I'm your AI tutor 👋 Ask me anything about the current video topic and I'll help you understand it better.</div>
+        </div>
+        <div class="chat-input-row">
+            <textarea class="chat-input" id="chatInput" placeholder="Ask a question..." rows="1"></textarea>
+            <button class="chat-send-btn" id="chatSendBtn" title="Send">➤</button>
+        </div>
+    </div>
+
+    <script>
+        // Chatbot Widget Logic (runs after main course script defines courseId / course)
+        (function() {
+            const fab = document.getElementById('chatFab');
+            const panel = document.getElementById('chatPanel');
+            const input = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('chatSendBtn');
+            const messages = document.getElementById('chatMessages');
+
+            let chatHistory = [];
+            let isOpen = false;
+            let currentProvider = 'gemini';
+
+            // Provider Switch Logic
+            const geminiBtn = document.getElementById('providerGemini');
+            const gptBtn = document.getElementById('providerGPT');
+
+            geminiBtn.onclick = (e) => {
+                e.stopPropagation();
+                currentProvider = 'gemini';
+                geminiBtn.classList.add('active');
+                geminiBtn.style.background = 'white'; geminiBtn.style.color = '#6366f1';
+                gptBtn.classList.remove('active');
+                gptBtn.style.background = 'transparent'; gptBtn.style.color = 'white';
+            };
+            gptBtn.onclick = (e) => {
+                e.stopPropagation();
+                currentProvider = 'openai';
+                gptBtn.classList.add('active');
+                gptBtn.style.background = 'white'; gptBtn.style.color = '#6366f1';
+                geminiBtn.classList.remove('active');
+                geminiBtn.style.background = 'transparent'; geminiBtn.style.color = 'white';
+            };
+
+            fab.addEventListener('click', function() {
+                isOpen = !isOpen;
+                panel.classList.toggle('open', isOpen);
+                fab.textContent = isOpen ? '✕' : '🤖';
+                if (isOpen) { setTimeout(() => input.focus(), 300); }
+            });
+
+            // Auto-resize textarea
+            input.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            sendBtn.addEventListener('click', sendMessage);
+
+            function appendBubble(role, text) {
+                const div = document.createElement('div');
+                div.className = 'chat-bubble ' + role;
+                div.textContent = text;
+                messages.appendChild(div);
+                messages.scrollTop = messages.scrollHeight;
+                return div;
+            }
+
+            async function sendMessage() {
+                const text = input.value.trim();
+                if (!text) return;
+
+                // Get course context — these are set by the main page script
+                const cId = window._chatCourseId;
+                const vTitle = window._chatVideoTitle || 'this video';
+                if (!cId) {
+                    appendBubble('bot', 'Please select a course to use the AI tutor.');
+                    return;
+                }
+
+                input.value = '';
+                input.style.height = 'auto';
+                sendBtn.disabled = true;
+
+                appendBubble('user', text);
+                // Snapshot history BEFORE pushing current message to avoid double-sending
+                const historySnapshot = chatHistory.slice();
+                chatHistory.push({ role: 'user', content: text });
+
+                const typing = appendBubble('typing', '🤔 Thinking...');
+
+                try {
+                    const res = await chatAsk(cId, text, vTitle, historySnapshot, currentProvider);
+                    typing.remove();
+                    if (res && res.success && res.data) {
+                        appendBubble('bot', res.data);
+                        chatHistory.push({ role: 'bot', content: res.data });
+                        // Keep history to last 10 messages
+                        if (chatHistory.length > 10) chatHistory = chatHistory.slice(-10);
+                    } else {
+                        appendBubble('bot', 'Sorry, I could not get a response. Please try again.');
+                    }
+                } catch (err) {
+                    typing.remove();
+                    appendBubble('bot', 'Connection error. Make sure the backend server is running.');
+                } finally {
+                    sendBtn.disabled = false;
+                    input.focus();
+                }
+            }
+        })();
+    </script>
+</body>
+</html>

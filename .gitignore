@@ -1,0 +1,34 @@
+# ── Dependencies ──
+node_modules/
+
+# ── Environment / Secrets ──
+.env
+.env.local
+.env.*.local
+
+# ── Logs ──
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── OS generated ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor / IDE ──
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ── Build output ──
+dist/
+build/
+
+# ── Package manager locks (keep package-lock.json, ignore yarn) ──
+yarn.lock

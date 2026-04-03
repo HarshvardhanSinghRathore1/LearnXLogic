@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - AI Study Assistant</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/api.js" defer></script>
+    <script src="js/app.js" defer></script> 
+</head>
+<body>
+    <div class="ambient-blob blob-1"></div>
+    <div class="ambient-blob blob-3"></div>
+
+    <!-- TOP NAVIGATION -->
+    <header class="navbar" style="background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--glass-border); padding: 1rem 0; box-shadow: var(--shadow-sm); z-index: 10; position: relative; display: flex; justify-content: space-between; align-items: center;">
+        <div class="container dashboard-header" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            
+            <div class="logo" style="color: var(--text-primary); text-decoration: none; font-size: 1.4rem; display: flex; align-items: center;">
+                <span style="background: var(--primary-color); color: white; padding: 0.25rem 0.5rem; border-radius: 8px; margin-right: 0.5rem;">🤖</span>
+                AI Study Assistant
+            </div>
+
+            <button id="mobileMenuBtn" class="btn" style="display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-primary);">☰</button>
+
+            <nav id="navMenu" class="nav-links" style="display: flex; align-items: center; gap: 1.5rem;">
+                <a href="dashboard.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Home</a>
+                <a href="notes.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Notes</a>
+                <a href="ask-ai.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Ask AI</a>
+                <a href="timetable.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Tasks</a>
+                <a href="profile.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Profile</a>
+                
+                <div class="profile-block" style="display: flex; align-items: center; gap: 1rem; border-left: 1px solid var(--border-color); padding-left: 1rem;">
+                    <button id="themeToggle" class="btn" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0.2rem;" title="Toggle Theme">🌙</button>
+                    <div class="avatar" id="userAvatar" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='profile.html'">U</div>
+                    <button id="logoutBtn" class="btn" style="background: transparent; border: 1px solid var(--border-color); cursor: pointer; color: #ef4444; font-size: 0.85rem; padding: 0.4rem 0.8rem; border-radius: var(--border-radius); transition: all 0.2s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='transparent'" title="Logout">Logout</button>
+                </div>
+            </nav>
+        </div>
+    </header>
+    
+    <main class="container" style="padding-top: 3rem;">
+        <div style="display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+            
+            <!-- LEFT: Profile Card -->
+            <aside class="glass-card" style="text-align: center; height: fit-content;">
+                <div class="avatar" id="pageAvatar" style="width: 100px; height: 100px; font-size: 2.5rem; margin: 0 auto 1.5rem; display: flex; justify-content: center; align-items: center; border-radius: 50%; background: var(--primary-color); color: white;">U</div>
+                <h2 id="pageUserName" style="margin-bottom: 0.5rem; color: var(--text-primary);">User Name</h2>
+                <p id="pageEmail" style="color: var(--text-secondary); margin-bottom: 1.5rem;">user@learnxlogic.com</p>
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 2rem; font-style: italic;">"Passionate learner on a journey to master logic!"</p>
+                
+                <button id="openEditProfileBtn" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">Edit Profile</button>
+                <button id="profileLogoutBtn" class="btn" style="width: 100%; border: 1px solid #ef4444; color: #ef4444; background: transparent;">Logout</button>
+            </aside>
+
+            <!-- RIGHT: User Activity Sections -->
+            <section style="display: flex; flex-direction: column; gap: 2rem;">
+                
+                <div class="glass-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3>📝 Saved Notes</h3>
+                        <a href="#" style="font-size: 0.85rem; color: var(--primary-color);">View All</a>
+                    </div>
+                    <div id="savedNotesContainer" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; text-align: center;">
+                            <p style="font-size: 0.85rem; color: var(--text-secondary);">Loading notes...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <h3 style="margin-bottom: 1.5rem;">✅ Completed Tasks</h3>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.95rem;">Created Weekly Timetable</span>
+                            <span class="pill pill-green">Done</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <h3 style="margin-bottom: 1.5rem;">🕒 Recent Activity</h3>
+                    <div style="border-left: 2px solid var(--primary-color); padding-left: 1.5rem; margin-left: 0.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+                        <div style="position: relative;">
+                            <div style="position: absolute; left: -1.8rem; top: 0.3rem; width: 10px; height: 10px; border-radius: 50%; background: var(--primary-color);"></div>
+                            <p style="font-weight: 500;">Logged in</p>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary);">Today, 10:00 AM</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- EDIT PROFILE MODAL -->
+    <div class="modal-overlay" id="editProfileModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1.5rem;">
+                <h2>Edit Profile</h2>
+                <button id="closeEditProfileBtn" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);">&times;</button>
+            </div>
+            <form id="editProfileForm">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>Username</label>
+                    <input type="text" id="editUserName" class="form-control" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>Email <span style="font-size: 0.8rem; color: var(--text-secondary);">(read-only)</span></label>
+                    <input type="email" id="editEmail" class="form-control" disabled style="opacity: 0.7;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label>Bio</label>
+                    <textarea id="editBio" class="form-control" rows="3" placeholder="Tell us about yourself..."></textarea>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="button" id="cancelEditBtn" class="btn btn-outline" style="flex: 1;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 1; background: #10b981;">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                if (typeof getProfile === 'function') {
+                    const res = await getProfile();
+                    if (res && res.success && res.data) {
+                        const u = res.data;
+                        
+                        // Check if localStorage has overrides (since no backend edit endpoint currently)
+                        const localProfile = JSON.parse(localStorage.getItem('localProfileOverrides') || '{}');
+                        const displayName = localProfile.name || u.name;
+                        const displayBio = localProfile.bio || '"Passionate learner on a journey to master logic!"';
+
+                        document.getElementById('pageUserName').innerText = displayName;
+                        document.getElementById('pageEmail').innerText = u.email;
+                        document.getElementById('pageAvatar').innerText = displayName.substring(0, 2).toUpperCase();
+                        
+                        // Set specific bio based on DOM traversal or ID
+                        document.getElementById('pageUserName').nextElementSibling.nextElementSibling.innerText = displayBio;
+                    }
+                }
+            } catch(e) {
+                console.log("Could not load backend profile data.");
+            }
+
+            const profileLogout = document.getElementById('profileLogoutBtn');
+            if (profileLogout) {
+                profileLogout.addEventListener('click', () => {
+                    localStorage.removeItem('token');
+                    window.location.href = 'login.html';
+                });
+            }
+
+            // --- LOAD SAVED NOTES LOGIC ---
+            const notesContainer = document.getElementById('savedNotesContainer');
+            function loadSavedNotes() {
+                if (!notesContainer) return;
+                
+                const globalNotes = JSON.parse(localStorage.getItem('globalStudyNotes') || '{"notes":[]}').notes;
+                
+                if (!globalNotes || globalNotes.length === 0) {
+                    notesContainer.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-secondary); text-align: center; padding: 1rem;">No saved notes yet. Generate some from your active courses!</p>';
+                    return;
+                }
+
+                notesContainer.innerHTML = '';
+                // Show latest notes first
+                globalNotes.reverse().forEach((note, index) => {
+                    // Create the authentic index inside original reversed array for deletion map
+                    const originalIndex = globalNotes.length - 1 - index; 
+                    const safeId = note.id || ('note_' + Date.now() + index);
+
+                    notesContainer.innerHTML += `
+                        <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div style="flex: 1; padding-right: 1rem;">
+                                <h4 style="margin-bottom: 0.25rem;">${note.title}</h4>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Generated: ${note.date} • ${note.source}</p>
+                                
+                                <div id="noteContent_${safeId}" style="display: none; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 8px; margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-primary); max-height: 400px; overflow-y: auto;">
+                                    ${note.content || 'No content saved systematically.'}
+                                </div>
+                                <button onclick="document.getElementById('noteContent_${safeId}').style.display = document.getElementById('noteContent_${safeId}').style.display === 'none' ? 'block' : 'none'" style="background: none; border: none; color: var(--primary-color); font-size: 0.85rem; cursor: pointer; padding: 0;">View Full Note</button>
+                            </div>
+                            <button onclick="deleteNote(${originalIndex})" style="background: transparent; border: none; font-size: 1.1rem; color: var(--text-secondary); cursor: pointer; margin-top: 0.2rem;" title="Delete Note">🗑️</button>
+                        </div>
+                    `;
+                });
+            }
+
+            // Bind global delete function
+            window.deleteNote = function(index) {
+                if(confirm("Are you sure you want to delete this note?")) {
+                    const data = JSON.parse(localStorage.getItem('globalStudyNotes') || '{"notes":[]}');
+                    data.notes.splice(index, 1);
+                    localStorage.setItem('globalStudyNotes', JSON.stringify(data));
+                    loadSavedNotes(); // re-render
+                }
+            };
+
+            // Call initial load
+            loadSavedNotes();
+
+            // --- EDIT PROFILE MODAL LOGIC ---
+            const editModal = document.getElementById('editProfileModal');
+            const openEditBtn = document.getElementById('openEditProfileBtn');
+            const closeEditBtn = document.getElementById('closeEditProfileBtn');
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            const editForm = document.getElementById('editProfileForm');
+
+            if (openEditBtn && editModal) {
+                openEditBtn.addEventListener('click', () => {
+                    // Pre-fill values
+                    document.getElementById('editUserName').value = document.getElementById('pageUserName').innerText;
+                    document.getElementById('editEmail').value = document.getElementById('pageEmail').innerText;
+                    
+                    const currentBio = document.getElementById('pageUserName').nextElementSibling.nextElementSibling.innerText;
+                    // remove surrounding quotes if they exist for editing
+                    document.getElementById('editBio').value = currentBio.replace(/^"|"$/g, '');
+                    
+                    editModal.classList.add('active');
+                });
+
+                const closeModal = () => editModal.classList.remove('active');
+                closeEditBtn.addEventListener('click', closeModal);
+                cancelEditBtn.addEventListener('click', closeModal);
+
+                editForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    
+                    const newName = document.getElementById('editUserName').value.trim();
+                    const newBio = document.getElementById('editBio').value.trim();
+                    const newBioFormatted = `"${newBio}"`;
+                    
+                    if (!newName) return;
+
+                    // Update UI immediately
+                    document.getElementById('pageUserName').innerText = newName;
+                    document.getElementById('pageAvatar').innerText = newName.substring(0, 2).toUpperCase();
+                    document.getElementById('pageUserName').nextElementSibling.nextElementSibling.innerText = newBioFormatted;
+                    
+                    // Save locally
+                    localStorage.setItem('localProfileOverrides', JSON.stringify({
+                        name: newName,
+                        bio: newBioFormatted
+                    }));
+                    
+                    closeModal();
+                });
+            }
+        });
+    </script>
+</body>
+</html>

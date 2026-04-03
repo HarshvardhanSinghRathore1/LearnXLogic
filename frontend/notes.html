@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Notes - LearnXLogic</title>
+    <meta name="description" content="View all your AI-generated study notes in one place on LearnXLogic.">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/api.js" defer></script>
+    <script src="js/app.js" defer></script>
+    <style>
+        /* ── Notes Page Specific Styles ── */
+        .notes-page-header {
+            padding: 2.5rem 0 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .notes-search-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 0.5rem 1rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            min-width: 260px;
+        }
+
+        .notes-search-bar input {
+            border: none;
+            background: transparent;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .notes-search-bar input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* ── Notes Grid ── */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.25rem;
+            padding-bottom: 4rem;
+        }
+
+        /* ── Note Card ── */
+        .note-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .note-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--primary-color);
+        }
+
+        .note-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .note-card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+            flex: 1;
+        }
+
+        .note-card-meta {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .note-card-preview {
+            font-size: 0.83rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            /* Show first 3 lines of preview */
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* ── Expanded Content ── */
+        .note-card-full {
+            display: none;
+            background: var(--bg-color);
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 0.83rem;
+            color: var(--text-primary);
+            line-height: 1.7;
+            max-height: 420px;
+            overflow-y: auto;
+            border: 1px solid var(--glass-border);
+        }
+
+        .note-card-full::-webkit-scrollbar { width: 4px; }
+        .note-card-full::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+
+        .note-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.25rem;
+        }
+
+        .btn-view-note {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-size: 0.83rem;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0;
+            font-family: inherit;
+            transition: opacity 0.15s;
+        }
+        .btn-view-note:hover { opacity: 0.75; }
+
+        .btn-delete-note {
+            background: transparent;
+            border: none;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .btn-delete-note:hover { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+        /* ── Empty & Loading states ── */
+        .notes-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--text-secondary);
+        }
+        .notes-empty span { font-size: 3rem; display: block; margin-bottom: 1rem; }
+        .notes-count-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .notes-page-header { flex-direction: column; align-items: flex-start; }
+            .notes-search-bar { width: 100%; min-width: unset; }
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient-blob blob-1"></div>
+    <div class="ambient-blob blob-2"></div>
+
+    <!-- TOP NAVIGATION (matches dashboard.html navbar exactly) -->
+    <header class="navbar" style="background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--glass-border); padding: 1rem 0; box-shadow: var(--shadow-sm); z-index: 10; position: relative; display: flex; justify-content: space-between; align-items: center;">
+        <div class="container dashboard-header" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+
+            <div class="logo" style="color: var(--text-primary); text-decoration: none; font-size: 1.4rem; display: flex; align-items: center;">
+                <span style="background: var(--primary-color); color: white; padding: 0.25rem 0.5rem; border-radius: 8px; margin-right: 0.5rem;">🤖</span>
+                AI Study Assistant
+            </div>
+
+            <button id="mobileMenuBtn" class="btn" style="display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-primary);">☰</button>
+
+            <nav id="navMenu" class="nav-links" style="display: flex; align-items: center; gap: 1.5rem;">
+                <a href="dashboard.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Home</a>
+                <a href="notes.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Notes</a>
+                <a href="#" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Ask AI</a>
+                <a href="timetable.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Tasks</a>
+                <a href="profile.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Profile</a>
+
+                <div class="profile-block" style="display: flex; align-items: center; gap: 1rem; border-left: 1px solid var(--border-color); padding-left: 1rem;">
+                    <button id="themeToggle" class="btn" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0.2rem;" title="Toggle Theme">🌙</button>
+                    <div class="avatar" id="userAvatar" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='profile.html'">U</div>
+                    <button id="logoutBtn" class="btn" style="background: transparent; border: 1px solid var(--border-color); cursor: pointer; color: #ef4444; font-size: 0.85rem; padding: 0.4rem 0.8rem; border-radius: var(--border-radius); transition: all 0.2s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='transparent'" title="Logout">Logout</button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Page Header -->
+        <div class="notes-page-header">
+            <div>
+                <h1 style="font-size: 1.75rem; display: flex; align-items: center; gap: 0.5rem;">📝 All Saved Notes</h1>
+                <p id="notesCountLabel" class="notes-count-label">Loading...</p>
+            </div>
+            <!-- Search / Filter -->
+            <div class="notes-search-bar">
+                <span style="color: var(--text-secondary); font-size: 1rem;">🔍</span>
+                <input type="text" id="notesSearchInput" placeholder="Search notes by title..." oninput="filterNotes(this.value)">
+            </div>
+        </div>
+
+        <!-- Notes Grid -->
+        <div class="notes-grid" id="notesGrid">
+            <p style="color: var(--text-secondary); padding: 2rem;">Loading notes...</p>
+        </div>
+    </main>
+
+    <script>
+        // ── Auth Guard ──
+        document.addEventListener('DOMContentLoaded', function () {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = 'login.html'; return; }
+
+            // Load user avatar
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (user.name) {
+                    document.getElementById('userAvatar').innerText = user.name.substring(0, 2).toUpperCase();
+                }
+            } catch (e) {}
+
+            // Logout button
+            document.getElementById('logoutBtn').addEventListener('click', function () {
+                localStorage.removeItem('token');
+                window.location.href = 'login.html';
+            });
+
+            // Initial render
+            renderNotes('');
+        });
+
+        // ── Load & Render Notes (called on load + search) ──
+        // Reads from the same localStorage key used by dashboard and course pages
+        var _allNotes = []; // cached for search filtering
+
+        function renderNotes(searchQuery) {
+            var grid = document.getElementById('notesGrid');
+            var countLabel = document.getElementById('notesCountLabel');
+
+            // Read from the shared globalStudyNotes key
+            var stored = localStorage.getItem('globalStudyNotes');
+            var notes = [];
+            try {
+                var parsed = JSON.parse(stored || '{"notes":[]}');
+                notes = Array.isArray(parsed.notes) ? parsed.notes : [];
+            } catch (e) {
+                notes = [];
+            }
+
+            // Sort: latest first (id = "note_<timestamp>")
+            notes = notes.slice().sort(function (a, b) {
+                var aTs = parseInt((a.id || '').replace('note_', '')) || 0;
+                var bTs = parseInt((b.id || '').replace('note_', '')) || 0;
+                return bTs - aTs;
+            });
+
+            _allNotes = notes; // cache for search
+
+            // Apply search filter
+            var query = (searchQuery || '').toLowerCase().trim();
+            var filtered = query
+                ? notes.filter(function (n) { return (n.title || '').toLowerCase().includes(query); })
+                : notes;
+
+            // Update count label
+            var total = notes.length;
+            countLabel.innerText = total === 0
+                ? 'No notes yet'
+                : (query
+                    ? filtered.length + ' of ' + total + ' note' + (total !== 1 ? 's' : '') + ' match'
+                    : total + ' note' + (total !== 1 ? 's' : '') + ' saved');
+
+            // Empty state
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="notes-empty"><span>📭</span>' +
+                    (query
+                        ? '<p>No notes match "<strong>' + escapeHtml(query) + '</strong>".</p>'
+                        : '<p>No saved notes yet.</p><p style="font-size:0.85rem;margin-top:0.5rem;">Go to a course page and click ✨ Generate Notes to get started.</p>' +
+                          '<a href="dashboard.html" class="btn btn-primary" style="display:inline-block;margin-top:1.5rem;padding:0.6rem 1.5rem;">← Back to Dashboard</a>') +
+                    '</div>';
+                return;
+            }
+
+            // Build note cards
+            var html = '';
+            filtered.forEach(function (note, idx) {
+                var safeId = note.id || ('note_allpage_' + idx);
+                // Plain-text preview: strip markdown symbols for a clean 3-line preview
+                var preview = (note.content || '')
+                    .replace(/```[\s\S]*?```/g, '')     // remove code blocks
+                    .replace(/[#*`_>~]/g, '')           // strip markdown symbols
+                    .replace(/\n+/g, ' ')               // flatten newlines
+                    .trim()
+                    .substring(0, 220);
+
+                // Find real index in the original (unsorted, pre-search) _allNotes for delete
+                var originalIdx = _allNotes.findIndex(function (n) { return (n.id || '') === safeId; });
+
+                html +=
+                    '<div class="note-card" id="card_' + safeId + '">' +
+                        '<div class="note-card-header">' +
+                            '<div class="note-card-title">' + escapeHtml(note.title || 'Untitled Note') + '</div>' +
+                        '</div>' +
+                        '<div class="note-card-meta">📅 ' + (note.date || '—') + ' &nbsp;•&nbsp; ' + escapeHtml(note.source || 'AI Generated') + '</div>' +
+                        '<div class="note-card-preview">' + escapeHtml(preview) + (preview.length >= 220 ? '…' : '') + '</div>' +
+                        // Full content (hidden by default)
+                        '<div class="note-card-full" id="full_' + safeId + '">' + escapeHtml(note.content || '') + '</div>' +
+                        '<div class="note-card-footer">' +
+                            '<button class="btn-view-note" onclick="toggleNoteExpand(\'' + safeId + '\', this)">📖 View Full Note</button>' +
+                            '<button class="btn-delete-note" onclick="deleteNote(' + originalIdx + ', \'' + safeId + '\')" title="Delete note">🗑️</button>' +
+                        '</div>' +
+                    '</div>';
+            });
+
+            grid.innerHTML = html;
+        }
+
+        // ── Toggle Full Note Expand ──
+        function toggleNoteExpand(safeId, btn) {
+            var el = document.getElementById('full_' + safeId);
+            if (!el) return;
+            var isVisible = el.style.display === 'block';
+            el.style.display = isVisible ? 'none' : 'block';
+            btn.innerText = isVisible ? '📖 View Full Note' : '🔼 Collapse Note';
+        }
+
+        // ── Delete a Note ──
+        function deleteNote(originalIdx, safeId) {
+            if (!confirm('Delete this note? This cannot be undone.')) return;
+            var data = JSON.parse(localStorage.getItem('globalStudyNotes') || '{"notes":[]}');
+            if (!Array.isArray(data.notes)) return;
+            // Safety: re-find by id in case indices shifted
+            var idxById = data.notes.findIndex(function (n) { return (n.id || '') === safeId; });
+            var removeIdx = idxById >= 0 ? idxById : originalIdx;
+            if (removeIdx < 0 || removeIdx >= data.notes.length) return;
+            data.notes.splice(removeIdx, 1);
+            localStorage.setItem('globalStudyNotes', JSON.stringify(data));
+            // Re-render with current search query
+            var query = document.getElementById('notesSearchInput') ? document.getElementById('notesSearchInput').value : '';
+            renderNotes(query);
+        }
+
+        // ── Search Filter ──
+        function filterNotes(query) {
+            renderNotes(query);
+        }
+
+        // ── XSS-safe HTML escape ──
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>

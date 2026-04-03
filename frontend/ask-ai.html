@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ask AI - LearnXLogic</title>
+    <meta name="description" content="Ask any programming or computer science question to your AI tutor on LearnXLogic.">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/api.js" defer></script>
+    <script src="js/app.js" defer></script>
+    <style>
+        /* ── Ask AI Page Layout ── */
+        .ask-ai-layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 1.5rem;
+            padding: 2rem 0 4rem;
+            min-height: calc(100vh - 80px);
+        }
+        @media (max-width: 768px) {
+            .ask-ai-layout { grid-template-columns: 1fr; }
+            .ask-ai-sidebar { display: none; }
+        }
+
+        /* ── Sidebar ── */
+        .ask-ai-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .sidebar-section {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 1.25rem;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .sidebar-section h4 {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .quick-prompt {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: left;
+            font-family: inherit;
+            transition: border-color 0.15s, background 0.15s;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+        .quick-prompt:hover { border-color: var(--primary-color); background: rgba(99,102,241,0.06); }
+        .quick-prompt:last-child { margin-bottom: 0; }
+
+        /* ── Chat Area ── */
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Provider switcher */
+        .provider-switcher {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .provider-pill {
+            padding: 0.3rem 0.85rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid var(--glass-border);
+            background: var(--bg-color);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .provider-pill.active {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            border-color: transparent;
+        }
+
+        /* Chat messages window */
+        .chat-window {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            flex: 1;
+            min-height: 420px;
+            max-height: 520px;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scroll-behavior: smooth;
+        }
+        .chat-window::-webkit-scrollbar { width: 4px; }
+        .chat-window::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+
+        /* Bubbles */
+        .bubble-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+        .bubble-row.user { flex-direction: row-reverse; }
+
+        .bubble-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+        .bubble-avatar.ai-avatar { background: linear-gradient(135deg, #6366f1, #a855f7); color: white; }
+        .bubble-avatar.user-avatar { background: var(--primary-color); color: white; }
+
+        .bubble {
+            max-width: 75%;
+            padding: 0.75rem 1rem;
+            border-radius: 16px;
+            font-size: 0.88rem;
+            line-height: 1.65;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .bubble.ai {
+            background: var(--bg-color);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+        .bubble.user {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .bubble.typing {
+            background: var(--bg-color);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            font-style: italic;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Welcome message */
+        .chat-welcome {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: var(--text-secondary);
+        }
+        .chat-welcome span { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
+        .chat-welcome h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--text-primary); }
+
+        /* Input Row */
+        .chat-input-area {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 0.75rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+        .chat-textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.92rem;
+            resize: none;
+            line-height: 1.5;
+            max-height: 120px;
+            padding: 0.3rem 0.25rem;
+        }
+        .chat-textarea::placeholder { color: var(--text-secondary); }
+
+        .chat-send-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border: none;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .chat-send-btn:hover { opacity: 0.9; transform: scale(1.05); }
+        .chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        /* Clear button */
+        .btn-clear-chat {
+            background: none;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            padding: 0.3rem 0.75rem;
+            font-family: inherit;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-clear-chat:hover { border-color: #ef4444; color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="ambient-blob blob-1"></div>
+    <div class="ambient-blob blob-2"></div>
+
+    <!-- TOP NAVIGATION (consistent with all pages) -->
+    <header class="navbar" style="background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--glass-border); padding: 1rem 0; box-shadow: var(--shadow-sm); z-index: 10; position: relative; display: flex; justify-content: space-between; align-items: center;">
+        <div class="container dashboard-header" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div class="logo" style="color: var(--text-primary); text-decoration: none; font-size: 1.4rem; display: flex; align-items: center;">
+                <span style="background: var(--primary-color); color: white; padding: 0.25rem 0.5rem; border-radius: 8px; margin-right: 0.5rem;">🤖</span>
+                AI Study Assistant
+            </div>
+            <button id="mobileMenuBtn" class="btn" style="display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-primary);">☰</button>
+            <nav id="navMenu" class="nav-links" style="display: flex; align-items: center; gap: 1.5rem;">
+                <a href="dashboard.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Home</a>
+                <a href="notes.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Notes</a>
+                <a href="ask-ai.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Ask AI</a>
+                <a href="timetable.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Tasks</a>
+                <a href="profile.html" class="nav-link" style="font-weight: 500; transition: color 0.2s;">Profile</a>
+                <div class="profile-block" style="display: flex; align-items: center; gap: 1rem; border-left: 1px solid var(--border-color); padding-left: 1rem;">
+                    <button id="themeToggle" class="btn" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0.2rem;" title="Toggle Theme">🌙</button>
+                    <div class="avatar" id="userAvatar" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='profile.html'">U</div>
+                    <button id="logoutBtn" class="btn" style="background: transparent; border: 1px solid var(--border-color); cursor: pointer; color: #ef4444; font-size: 0.85rem; padding: 0.4rem 0.8rem; border-radius: var(--border-radius); transition: all 0.2s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='transparent'" title="Logout">Logout</button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="ask-ai-layout">
+
+            <!-- SIDEBAR: quick prompts + tips -->
+            <aside class="ask-ai-sidebar">
+                <div class="sidebar-section">
+                    <h4>⚡ Quick Prompts</h4>
+                    <button class="quick-prompt" onclick="fillPrompt('Explain the difference between a stack and a queue with examples.')">Explain stack vs queue</button>
+                    <button class="quick-prompt" onclick="fillPrompt('What is Big O notation and why does it matter?')">What is Big O notation?</button>
+                    <button class="quick-prompt" onclick="fillPrompt('How does async/await work in JavaScript? Give a code example.')">How does async/await work?</button>
+                    <button class="quick-prompt" onclick="fillPrompt('Explain recursion with a simple example in Python.')">Explain recursion</button>
+                    <button class="quick-prompt" onclick="fillPrompt('What are the main differences between SQL and NoSQL databases?')">SQL vs NoSQL</button>
+                    <button class="quick-prompt" onclick="fillPrompt('Walk me through binary search — how does it work and what is its complexity?')">Binary search explained</button>
+                </div>
+                <div class="sidebar-section">
+                    <h4>💡 Tips</h4>
+                    <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.6;">
+                        Press <kbd style="background: var(--bg-color); border: 1px solid var(--glass-border); border-radius: 4px; padding: 1px 5px; font-size: 0.77rem;">Enter</kbd> to send.<br>
+                        Use <kbd style="background: var(--bg-color); border: 1px solid var(--glass-border); border-radius: 4px; padding: 1px 5px; font-size: 0.77rem;">Shift+Enter</kbd> for new line.<br><br>
+                        Your chat history is kept for context within this session.
+                    </p>
+                </div>
+            </aside>
+
+            <!-- MAIN CHAT AREA -->
+            <section class="chat-area">
+                <!-- Header row with provider switcher + clear -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                    <div>
+                        <h1 style="font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">🤖 Ask AI Tutor</h1>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">Ask anything about programming, DSA, web dev, or tech concepts.</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <!-- Provider Switcher -->
+                        <div class="provider-switcher">
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);">Model:</span>
+                            <button id="btnGemini" class="provider-pill active" onclick="setProvider('gemini', this)">✨ Gemini</button>
+                            <button id="btnGPT" class="provider-pill" onclick="setProvider('openai', this)">🧠 GPT</button>
+                        </div>
+                        <button class="btn-clear-chat" onclick="clearChat()">🗑 Clear</button>
+                    </div>
+                </div>
+
+                <!-- Chat Window -->
+                <div class="chat-window" id="chatWindow">
+                    <!-- Welcome state shown when no messages -->
+                    <div class="chat-welcome" id="chatWelcome">
+                        <span>🤖</span>
+                        <h3>Hi! I'm your AI Tutor</h3>
+                        <p style="font-size: 0.88rem;">Ask me anything about programming, algorithms, data structures, web development, or any tech concept. I'll do my best to explain it clearly!</p>
+                    </div>
+                </div>
+
+                <!-- Input Row -->
+                <div class="chat-input-area">
+                    <textarea
+                        id="chatInput"
+                        class="chat-textarea"
+                        rows="1"
+                        placeholder="Ask a question... (Enter to send, Shift+Enter for new line)"
+                    ></textarea>
+                    <button class="chat-send-btn" id="sendBtn" title="Send (Enter)">➤</button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        // ── Auth Guard ──
+        document.addEventListener('DOMContentLoaded', function () {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = 'login.html'; return; }
+
+            // User avatar
+            try {
+                const u = JSON.parse(localStorage.getItem('user') || '{}');
+                if (u.name) document.getElementById('userAvatar').innerText = u.name.substring(0, 2).toUpperCase();
+            } catch (e) {}
+
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', function () {
+                localStorage.removeItem('token');
+                window.location.href = 'login.html';
+            });
+
+            // Auto-resize textarea
+            const textarea = document.getElementById('chatInput');
+            textarea.addEventListener('input', function () {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+
+            // Enter = send, Shift+Enter = newline
+            textarea.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        });
+
+        // ── State ──
+        let chatHistory = [];        // [{role:'user'|'assistant', content:'...'}]
+        let currentProvider = 'gemini';
+        let isLoading = false;
+
+        // ── Provider Switch ──
+        function setProvider(provider, btn) {
+            currentProvider = provider;
+            document.querySelectorAll('.provider-pill').forEach(function (p) {
+                p.classList.remove('active');
+            });
+            btn.classList.add('active');
+        }
+
+        // ── Fill prompt from sidebar ──
+        function fillPrompt(text) {
+            const ta = document.getElementById('chatInput');
+            ta.value = text;
+            ta.style.height = 'auto';
+            ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+            ta.focus();
+        }
+
+        // ── Clear Chat ──
+        function clearChat() {
+            chatHistory = [];
+            const win = document.getElementById('chatWindow');
+            win.innerHTML = '<div class="chat-welcome" id="chatWelcome">' +
+                '<span>🤖</span>' +
+                '<h3>Hi! I\'m your AI Tutor</h3>' +
+                '<p style="font-size:0.88rem;">Ask me anything about programming, algorithms, data structures, web development, or any tech concept. I\'ll do my best to explain it clearly!</p>' +
+                '</div>';
+        }
+
+        // ── Append a bubble ──
+        function appendBubble(role, text) {
+            // Hide welcome on first message
+            var welcome = document.getElementById('chatWelcome');
+            if (welcome) welcome.remove();
+
+            var win = document.getElementById('chatWindow');
+            var row = document.createElement('div');
+            row.className = 'bubble-row ' + role;
+
+            var avatarEl = document.createElement('div');
+            avatarEl.className = 'bubble-avatar ' + (role === 'ai' ? 'ai-avatar' : 'user-avatar');
+            avatarEl.innerText = role === 'ai' ? '🤖' : 'U';
+
+            // Try to use user's initials for user avatar
+            try {
+                const u = JSON.parse(localStorage.getItem('user') || '{}');
+                if (u.name && role === 'user') avatarEl.innerText = u.name.substring(0, 2).toUpperCase();
+            } catch (e) {}
+
+            var bubble = document.createElement('div');
+            bubble.className = 'bubble ' + role;
+            bubble.innerText = text;
+
+            if (role === 'ai') {
+                row.appendChild(avatarEl);
+                row.appendChild(bubble);
+            } else {
+                row.appendChild(bubble);
+                row.appendChild(avatarEl);
+            }
+
+            win.appendChild(row);
+            win.scrollTop = win.scrollHeight;
+            return bubble;
+        }
+
+        // ── Show/remove typing indicator ──
+        var typingEl = null;
+        function showTyping() {
+            var welcome = document.getElementById('chatWelcome');
+            if (welcome) welcome.remove();
+
+            var win = document.getElementById('chatWindow');
+            var row = document.createElement('div');
+            row.className = 'bubble-row ai';
+            row.id = 'typingRow';
+
+            var avatar = document.createElement('div');
+            avatar.className = 'bubble-avatar ai-avatar';
+            avatar.innerText = '🤖';
+
+            var bbl = document.createElement('div');
+            bbl.className = 'bubble typing';
+            bbl.innerText = '⏳ AI is thinking...';
+
+            row.appendChild(avatar);
+            row.appendChild(bbl);
+            win.appendChild(row);
+            win.scrollTop = win.scrollHeight;
+        }
+
+        function removeTyping() {
+            var row = document.getElementById('typingRow');
+            if (row) row.remove();
+        }
+
+        // ── Main Send Function ──
+        async function sendMessage() {
+            if (isLoading) return;
+
+            var ta = document.getElementById('chatInput');
+            var message = ta.value.trim();
+            if (!message) return;
+
+            // Clear input
+            ta.value = '';
+            ta.style.height = 'auto';
+
+            // Show user bubble
+            appendBubble('user', message);
+
+            // Add to history
+            chatHistory.push({ role: 'user', content: message });
+
+            // Disable input while loading
+            isLoading = true;
+            document.getElementById('sendBtn').disabled = true;
+            ta.disabled = true;
+            showTyping();
+
+            try {
+                // Call the backend /api/ai/ask endpoint via api.js helper
+                var res = await askAiGeneral(message, chatHistory.slice(-8), currentProvider);
+
+                removeTyping();
+
+                if (res && res.success) {
+                    var reply = res.data || 'No response received.';
+                    appendBubble('ai', reply);
+                    // Add AI reply to history for context
+                    chatHistory.push({ role: 'assistant', content: reply });
+                } else {
+                    appendBubble('ai', '⚠️ ' + (res.message || 'Something went wrong. Please try again.'));
+                }
+            } catch (err) {
+                removeTyping();
+                var errMsg = (err && err.message) ? err.message : 'Network error. Please check your connection.';
+                appendBubble('ai', '❌ Error: ' + errMsg);
+            } finally {
+                isLoading = false;
+                document.getElementById('sendBtn').disabled = false;
+                ta.disabled = false;
+                ta.focus();
+            }
+        }
+    </script>
+</body>
+</html>
