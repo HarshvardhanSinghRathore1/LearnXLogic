@@ -215,7 +215,9 @@
                     const formData = new FormData();
                     formData.append('profilePhoto', file);
 
-                    const res  = await fetch('/api/upload-profile', {
+                    // Extract baseUrl from api.js or use fallback
+                    const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL.replace(/\/api$/, '') : 'https://your-backend-url.onrender.com';
+                    const res  = await fetch(`${baseUrl}/api/upload-profile`, {
                         method:  'POST',
                         headers: { 'Authorization': `Bearer ${token}` },
                         body:    formData,
