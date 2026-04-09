@@ -44,11 +44,40 @@
             
             <!-- LEFT: Profile Card -->
             <aside class="glass-card" style="text-align: center; height: fit-content;">
-                <div class="avatar" id="pageAvatar" style="width: 100px; height: 100px; font-size: 2.5rem; margin: 0 auto 1.5rem; display: flex; justify-content: center; align-items: center; border-radius: 50%; background: var(--primary-color); color: white;">U</div>
+
+                <!-- Avatar: shows photo if uploaded, else initials -->
+                <div style="position: relative; width: 100px; margin: 0 auto 1.5rem;">
+                    <div id="pageAvatar"
+                         style="width: 100px; height: 100px; font-size: 2.5rem; display: flex; justify-content: center; align-items: center; border-radius: 50%; background: var(--primary-color); color: white; overflow: hidden; cursor: pointer;"
+                         title="Click to change photo"
+                         onclick="document.getElementById('photoFileInput').click()">
+                        U
+                    </div>
+                    <span style="position: absolute; bottom: 2px; right: 2px; background: var(--primary-color); color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.25);" onclick="document.getElementById('photoFileInput').click()" title="Upload photo">📷</span>
+                </div>
+
                 <h2 id="pageUserName" style="margin-bottom: 0.5rem; color: var(--text-primary);">User Name</h2>
                 <p id="pageEmail" style="color: var(--text-secondary); margin-bottom: 1.5rem;">user@learnxlogic.com</p>
-                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 2rem; font-style: italic;">"Passionate learner on a journey to master logic!"</p>
-                
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.5rem; font-style: italic;">"Passionate learner on a journey to master logic!"</p>
+
+                <!-- Profile Photo Upload Form -->
+                <form id="photoUploadForm" style="margin-bottom: 1.5rem;">
+                    <input type="file" id="photoFileInput" accept="image/*" style="display: none;">
+
+                    <!-- Preview strip (hidden until file chosen) -->
+                    <div id="photoPreviewWrap" style="display: none; margin-bottom: 0.75rem;">
+                        <img id="photoPreview" src="" alt="Preview"
+                             style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
+                        <p id="photoFileName" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.4rem;"></p>
+                    </div>
+
+                    <button type="submit" id="uploadPhotoBtn" class="btn btn-primary"
+                            style="width: 100%; margin-bottom: 0.75rem; display: none; background: linear-gradient(135deg,#6366f1,#8b5cf6); border: none;">
+                        📤 Upload Profile Photo
+                    </button>
+                    <p id="uploadStatus" style="font-size: 0.8rem; min-height: 1.2rem;"></p>
+                </form>
+
                 <button id="openEditProfileBtn" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">Edit Profile</button>
                 <button id="profileLogoutBtn" class="btn" style="width: 100%; border: 1px solid #ef4444; color: #ef4444; background: transparent;">Logout</button>
             </aside>
@@ -119,6 +148,113 @@
             </form>
         </div>
     </div>
+
+    <script>
+        /* ============================================================
+           PROFILE PHOTO UPLOAD — NEW FEATURE
+           ============================================================ */
+        (function () {
+            const fileInput     = document.getElementById('photoFileInput');
+            const preview       = document.getElementById('photoPreview');
+            const previewWrap   = document.getElementById('photoPreviewWrap');
+            const fileNameEl    = document.getElementById('photoFileName');
+            const uploadBtn     = document.getElementById('uploadPhotoBtn');
+            const uploadStatus  = document.getElementById('uploadStatus');
+            const pageAvatar    = document.getElementById('pageAvatar');
+            const form          = document.getElementById('photoUploadForm');
+
+            // Helper — set avatar to a real image <img> inside the div
+            function setAvatarPhoto(url) {
+                pageAvatar.innerHTML = `<img src="${url}" alt="Profile Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">">`;
+                // Also update navbar avatar if present
+                const navAvatar = document.getElementById('userAvatar');
+                if (navAvatar) {
+                    navAvatar.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` ;
+                    navAvatar.style.padding = '0';
+                }
+            }
+
+            // On page load — restore saved photo from localStorage
+            const savedPhoto = localStorage.getItem('profilePhotoUrl');
+            if (savedPhoto) setAvatarPhoto(savedPhoto);
+
+            // File chosen — show preview + upload button
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.src        = e.target.result;
+                    previewWrap.style.display = 'block';
+                    fileNameEl.textContent    = file.name;
+                    uploadBtn.style.display   = 'block';
+                    uploadStatus.textContent  = '';
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Submit — send to backend
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const file = fileInput.files[0];
+                if (!file) return;
+
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    uploadStatus.textContent = '⚠️ You must be logged in.';
+                    uploadStatus.style.color = '#ef4444';
+                    return;
+                }
+
+                uploadBtn.disabled       = true;
+                uploadBtn.textContent    = 'Uploading…';
+                uploadStatus.textContent = '';
+
+                try {
+                    const formData = new FormData();
+                    formData.append('profilePhoto', file);
+
+                    const res  = await fetch('/api/upload-profile', {
+                        method:  'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body:    formData,
+                    });
+
+                    // Safely check if response is JSON (prevents "Unexpected token '<'")
+                    const contentType = res.headers.get("content-type");
+                    let data;
+                    if (contentType && contentType.includes("application/json")) {
+                        data = await res.json();
+                    } else {
+                        throw new Error(`Server returned unexpected response (Status: ${res.status}). Ensure backend is running and endpoint exists.`);
+                    }
+
+                    if (data.success) {
+                        // Show the real Cloudinary photo
+                        setAvatarPhoto(data.profilePhoto);
+                        localStorage.setItem('profilePhotoUrl', data.profilePhoto);
+
+                        uploadStatus.textContent = '✅ Photo updated!';
+                        uploadStatus.style.color = '#10b981';
+
+                        // Hide preview strip
+                        previewWrap.style.display = 'none';
+                        uploadBtn.style.display   = 'none';
+                        fileInput.value           = '';
+                    } else {
+                        throw new Error(data.message || 'Upload failed.');
+                    }
+                } catch (err) {
+                    uploadStatus.textContent = `❌ ${err.message}`;
+                    uploadStatus.style.color = '#ef4444';
+                } finally {
+                    uploadBtn.disabled    = false;
+                    uploadBtn.textContent = '📤 Upload Profile Photo';
+                }
+            });
+        })();
+    </script>
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {

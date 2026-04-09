@@ -56,6 +56,10 @@ const userSchema = new mongoose.Schema({
       videosCompleted: { type: Number, default: 0 }
     }
   ],
+  profilePhoto: {
+    type: String,
+    default: '',
+  },
   createdAt: {
     type: Date,
     default: Date.now,
