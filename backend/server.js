@@ -1,4 +1,14 @@
 require('dotenv').config();
+
+// Global error handlers to prevent silent crashes
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION:', reason);
+});
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -9,11 +19,14 @@ const connectDB = require('./config/db');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+console.log('Starting server initialization...');
+
 // Connect to MongoDB SAFELY without crashing before listen
 if (!process.env.MONGO_URI) {
   console.error('CRITICAL ERROR: MONGO_URI is missing from environment variables.');
   // Do not crash immediately, let the server listen first, but skip DB connection
 } else {
+  console.log('MONGO_URI is loaded successfully.');
   // Connect but catch any unhandled sync throws (db.js handles async errors, but just in case)
   try {
     connectDB();
@@ -30,9 +43,9 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-// Root route — redirect to login
+// Root route — test endpoint to confirm server is working
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'login.html'));
+  res.status(200).send("Server is working properly");
 });
 
 
