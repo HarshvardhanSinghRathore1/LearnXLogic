@@ -13,7 +13,8 @@ const connectDB = async () => {
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`Error connecting to MongoDB: ${error.message}`);
-    // Do not crash the server if DB connection fails
+    // Rethrow to let server.js handle it
+    throw error;
   }
 };
 

@@ -21,19 +21,7 @@ const PORT = process.env.PORT || 5000;
 
 console.log('Starting server initialization...');
 
-// Connect to MongoDB SAFELY without crashing before listen
-if (!process.env.MONGO_URI) {
-  console.error('CRITICAL ERROR: MONGO_URI is missing from environment variables.');
-  // Do not crash immediately, let the server listen first, but skip DB connection
-} else {
-  console.log('MONGO_URI is loaded successfully.');
-  // Connect but catch any unhandled sync throws (db.js handles async errors, but just in case)
-  try {
-    connectDB();
-  } catch (err) {
-    console.error('Failed to initialize DB connection:', err.message);
-  }
-}
+// Connection logic moved to bottom
 
 // Middlewares
 app.use(cors());
@@ -65,7 +53,20 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Server Error', error: err.message });
 });
 
-// Start the server FIRST so it listens on the correct port on Render
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Connect to MongoDB and then start server
+if (!process.env.MONGO_URI) {
+  console.error('CRITICAL ERROR: MONGO_URI is missing from environment variables.');
+  app.listen(PORT, () => console.log(`Server running on port ${PORT} (WITHOUT DB)`));
+} else {
+  console.log('MONGO_URI is loaded successfully. Connecting to MongoDB...');
+  connectDB().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  }).catch((err) => {
+    console.error('Failed to initialize DB connection:', err.message);
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT} (DB CONNECTION FAILED)`);
+    });
+  });
+}
