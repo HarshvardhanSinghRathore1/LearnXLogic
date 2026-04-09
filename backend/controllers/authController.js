@@ -30,7 +30,7 @@ const register = async (req, res, next) => {
     });
 
     if (user) {
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         _id: user._id,
         name: user.name,
@@ -38,10 +38,11 @@ const register = async (req, res, next) => {
         token: generateToken(user._id),
       });
     } else {
-      res.status(400).json({ success: false, message: 'Invalid user data' });
+      return res.status(400).json({ success: false, message: 'Invalid user data' });
     }
   } catch (error) {
-    next(error);
+    console.error('Registration API Error:', error);
+    return res.status(500).json({ success: false, message: 'Server Error during signup. Is MongoDB connected?', error: error.message });
   }
 };
 

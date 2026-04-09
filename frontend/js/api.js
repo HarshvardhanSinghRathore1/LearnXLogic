@@ -2,7 +2,7 @@
 // Use Render backend URL in production, localhost for local development
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:5000/api'
-    : 'https://your-backend-url.onrender.com/api'; // Replace with your actual Render URL
+    : window.location.origin + '/api';
 // Helper for making authenticated requests
 async function fetchWithAuth(endpoint, options = {}) {
     const token = localStorage.getItem('token');
